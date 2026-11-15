@@ -1,5 +1,5 @@
 // Offline support: try the network first, fall back to the saved copy.
-const CACHE = "study-planner-v1";
+const CACHE = "study-planner-v2";
 const FILES = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"];
 
 self.addEventListener("install", e => {

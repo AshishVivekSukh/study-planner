@@ -60,6 +60,14 @@ button:active{opacity:.75}
 .dots i{width:22px;height:6px;border-radius:3px;background:var(--line)}
 .dots i.d{background:var(--ok)} .dots i.n{background:var(--warn)}
 .empty{text-align:center;color:var(--mute);padding:22px 8px}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--brand);border-radius:4px}
+.bar.over i{background:var(--bad)} .bar.xp i{background:var(--accent)}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.bdg{background:var(--chip);border-radius:11px;padding:9px 5px;text-align:center;font-size:11px;color:var(--mute);opacity:.5}
+.bdg.got{opacity:1;outline:2px solid var(--ok);color:var(--ink)}
+.bdg b{display:block;font-size:12.5px;color:var(--ink)}
+.acts2{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
 /* timer */
 .ring{position:relative;width:min(72vw,280px);aspect-ratio:1;margin:8px auto 14px}
 .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
@@ -132,13 +140,21 @@ function dur(min){ min = Math.round(min); const h = Math.floor(min/60), m = min%
 function toast(msg){ const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 2600); }
 
 /* ---------- revision logic ---------- */
+const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+const planEnd = t => addDays(t.started || t.studied, Math.max(1, t.planDays || 1) - 1);
+const studying = () => S.topics.filter(t => !t.studied).sort((a,b) => planEnd(a) < planEnd(b) ? -1 : 1);
 function nextDue(t){
+  if (!t.studied) return null;                 // revisions start only after the topic is finished
   const g = S.settings.gaps, n = t.done.length;
   if (n >= g.length) return null;
   return addDays(n === 0 ? t.studied : t.done[n-1], g[n]);
 }
 function status(t){
   const nd = nextDue(t), td = today();
+  if (!t.studied) {
+    const over = daysBetween(planEnd(t), td);
+    return over > 0 ? {k:"bad", label:over + (over === 1 ? " day over" : " days over")} : over === 0 ? {k:"warn", label:"Last day"} : {k:"", label:"Studying"};
+  }
   if (!nd) return {k:"ok", label:"Mastered"};
   if (nd < td) return {k:"bad", label:"Overdue"};
   if (nd === td) return {k:"warn", label:"Due today"};
@@ -152,6 +168,58 @@ const sumMin = a => a.reduce((x,s) => x + s.min, 0);
 const sumPomo = a => a.reduce((x,s) => x + (s.pomos||0), 0);
 function accOf(a){ const q = a.reduce((x,s)=>x+(s.qa||0),0), c = a.reduce((x,s)=>x+(s.qc||0),0); return q ? Math.round(100*c/q) : null; }
 const subjects = () => [...new Set(S.topics.map(t=>t.subject).concat(S.sessions.map(s=>s.subject)).filter(Boolean))].sort();
+
+/* ---------- progress game (all derived from the data, nothing stored) ---------- */
+const TITLES = ["Beginner","Learner","Focused","Consistent","Dedicated","Scholar","Achiever","Expert","Master","Topper"];
+function game(){
+  const g = S.settings.gaps, byDay = {};
+  S.sessions.forEach(s => { byDay[s.date] = (byDay[s.date]||0) + s.min; });
+  const dates = Object.keys(byDay).sort(), pomos = sumPomo(S.sessions);
+  let xp = pomos*10, revOn = 0, revAll = 0, finOn = 0, finAll = 0, fin = 0, mastered = 0, qa = 0, qc = 0, targetDays = 0;
+  S.sessions.forEach(s => { qa += s.qa||0; qc += s.qc||0; });
+  S.topics.forEach(t => {
+    (t.pyq||[]).forEach(p => { if (p) { qa += p[0]; qc += p[1]; } });
+    if (!t.studied) return;
+    fin++;
+    if (t.planDays) { finAll++; if (t.studied <= planEnd(t)) { finOn++; xp += 50; } else xp += 25; }
+    let prev = t.studied;
+    t.done.forEach((d, i) => { revAll++; if (g[i] != null && d <= addDays(prev, g[i])) { revOn++; xp += 20; } else xp += 10; prev = d; });
+    if (t.done.length >= g.length) { mastered++; xp += 100; }
+  });
+  xp += qc;
+  dates.forEach(d => { const e = (S.days[d] && S.days[d].elh != null ? S.days[d].elh : S.settings.target) * 60; if (e && byDay[d] >= e) { targetDays++; xp += 30; } });
+  let best = 0, run = 0, pd = null;
+  dates.forEach(d => { run = pd && addDays(pd, 1) === d ? run + 1 : 1; best = Math.max(best, run); pd = d; });
+  let streak = 0, c = byDay[today()] ? today() : addDays(today(), -1);
+  while (byDay[c]) { streak++; c = addDays(c, -1); }
+  let lvl = 1; while (xp >= 100*lvl*(lvl+1)) lvl++;
+  const lo = 100*(lvl-1)*lvl, hi = 100*lvl*(lvl+1);
+  const acc = qa ? Math.round(100*qc/qa) : null;
+  const badges = [
+    ["First Pomodoro", "Finish 1 Pomodoro", pomos >= 1], ["25 Pomodoros", "Finish 25", pomos >= 25], ["100 Pomodoros", "Finish 100", pomos >= 100],
+    ["3-day streak", "Study 3 days in a row", best >= 3], ["7-day streak", "Study 7 days in a row", best >= 7], ["30-day streak", "Study 30 days in a row", best >= 30],
+    ["Finisher", "Finish a topic", fin >= 1], ["On plan", "Finish a topic within your planned days", finOn >= 1], ["On-time reviser", "Do 5 revisions on their due date", revOn >= 5],
+    ["Mastered", "Complete all revisions of a topic", mastered >= 1], ["Target day", "Reach your daily target hours", targetDays >= 1], ["Sharp solver", "80%+ on 20 or more questions", qa >= 20 && acc >= 80]
+  ];
+  return {xp, lvl, lo, hi, pct:Math.round(100*(xp-lo)/(hi-lo)), title:TITLES[Math.min(lvl, TITLES.length)-1], streak, best, revOn, revAll, finOn, finAll, mastered, acc, badges};
+}
+function levelBlock(G){
+  return "<div class='row between'><div class='title'>Level "+G.lvl+" · "+G.title+"</div><span class='chip"+(G.streak?" ok":"")+"'>"+G.streak+"-day streak</span></div>"
+    + "<div class='bar xp'><i style='width:"+G.pct+"%'></i></div><div class='small mute' style='margin-top:5px'>"+G.xp+" XP · "+(G.hi-G.xp)+" more to reach Level "+(G.lvl+1)+"</div>";
+}
+function progressCard(){
+  const G = game(), wk = o => { let m = 0; for (let i=0;i<7;i++) m += sumMin(sessOn(addDays(today(), -i-o))); return m; };
+  const a = wk(0), b = wk(7), tw = 7*S.settings.target*60, d = a - b;
+  return "<div class='card'><h2>Your progress</h2>" + levelBlock(G) + "<div class='stats' style='margin-top:12px'>"
+    + "<div class='stat'><b>"+(a/60).toFixed(1)+" h</b><span>Last 7 days · "+(d>0?"up "+dur(d):d<0?"down "+dur(-d):"same")+" vs the 7 before</span></div>"
+    + "<div class='stat'><b>"+Math.round(100*a/tw)+"%</b><span>Efficiency, last 7 days (was "+Math.round(100*b/tw)+"%)</span></div>"
+    + "<div class='stat'><b>"+G.streak+(G.streak===1?" day":" days")+"</b><span>Streak · best "+G.best+"</span></div>"
+    + "<div class='stat'><b>"+G.finOn+" of "+G.finAll+"</b><span>Topics finished within plan</span></div>"
+    + "<div class='stat'><b>"+G.revOn+" of "+G.revAll+"</b><span>Revisions done on time</span></div>"
+    + "<div class='stat'><b>"+G.mastered+"</b><span>Topics mastered</span></div></div>"
+    + "<div class='badges'>"+G.badges.map(x => "<div class='bdg"+(x[2]?" got":"")+"'><b>"+x[0]+"</b>"+x[1]+"</div>").join("")+"</div>"
+    + "<div class='small mute' style='margin-top:10px'>XP: 10 per Pomodoro · 50 for finishing a topic within plan (25 if late) · 20 per on-time revision (10 if late) · 100 per mastered topic · 30 for a target day · 1 per correct question.</div></div>";
+}
 
 /* ---------- generic bottom sheet form ---------- */
 function sheet(title, fields, onSave, opts={}){
@@ -187,50 +255,101 @@ function sheet(title, fields, onSave, opts={}){
 }
 
 /* ---------- actions ---------- */
+const KIND = ["Theory", "Numerical (solve PYQs in every revision)"];
 function addTopic(){
-  sheet("New topic studied", [
-    {k:"subject", label:"Subject", list:true, ph:"e.g. RCC"},
-    {k:"topic", label:"Topic / lecture", ph:"e.g. Ch 1 - Basic Concepts"},
-    {k:"studied", label:"Studied on", type:"date", value:today()}
+  sheet("New topic or unit", [
+    {k:"subject", label:"Subject", list:true, ph:"e.g. Steel Structure"},
+    {k:"topic", label:"Topic / unit", ph:"e.g. Compression Members"},
+    {k:"kind", label:"Type", type:"select", options:KIND, value:KIND[0]},
+    {k:"where", label:"Where are you?", type:"select", options:["Starting it now","Already finished it"], value:"Starting it now"},
+    {k:"date", label:"Start date (finish date, if already finished)", type:"date", value:today()},
+    {k:"days", label:"Days you plan to take", type:"number", value:7}
   ], v => {
-    if (!v.subject || !v.topic || !v.studied) return "Fill subject, topic and date";
-    S.topics.push({id:uid(), subject:v.subject, topic:v.topic, studied:v.studied, done:[], acc:null});
-  }, {note:"Revision dates are set automatically: " + S.settings.gaps.join(", ") + " days apart."});
+    if (!v.subject || !v.topic || !v.date) return "Fill subject, topic and date";
+    const o = {id:uid(), subject:v.subject, topic:v.topic, numerical:v.kind === KIND[1], started:v.date, planDays:null, studied:null, done:[], pyq:[], acc:null};
+    if (v.where === "Already finished it") o.studied = v.date;
+    else { if (!(+v.days >= 1)) return "Days planned must be 1 or more"; o.planDays = Math.round(+v.days); }
+    S.topics.push(o);
+  }, {note:"Set your own pace: you can add or cut days later. Revisions start when you mark the topic finished."});
+}
+function planForm(id){
+  const t = S.topics.find(x => x.id === id); if (!t) return;
+  const day = daysBetween(t.started, today()) + 1;
+  sheet("Change plan", [
+    {k:"days", label:"Total days planned for this topic", type:"number", value:t.planDays || 1}
+  ], v => {
+    if (!(+v.days >= 1)) return "Days planned must be 1 or more";
+    t.planDays = Math.round(+v.days);
+    setTimeout(() => toast("New finish date: " + nice(planEnd(t))), 50);
+  }, {note:t.topic + " · today is day " + Math.max(day, 1) + ". Give yourself more days or fewer, whatever fits your speed."});
+}
+function finishTopic(id){
+  const t = S.topics.find(x => x.id === id); if (!t) return;
+  sheet("Topic finished", [
+    {k:"date", label:"Finished on", type:"date", value:today()}
+  ], v => {
+    if (!v.date) return "Pick a date";
+    if (v.date < t.started) return "Date is before the start date (" + nice(t.started) + ")";
+    t.studied = v.date; t.done = []; t.pyq = [];
+    const took = daysBetween(t.started, v.date) + 1;
+    setTimeout(() => toast("Done in " + took + " of " + (t.planDays||took) + " planned days. First revision: " + nice(nextDue(t))), 50);
+  }, {note:t.subject + " · " + t.topic + ". Revisions begin now" + (t.numerical ? ", each with PYQs of this topic." : "."), saveLabel:"Mark finished"});
 }
 function markDone(id){
   const t = S.topics.find(x => x.id === id); if (!t) return;
-  sheet("Revision " + (t.done.length+1) + " done", [
-    {k:"date", label:"Revised on", type:"date", value:today()},
-    {k:"acc", label:"Question accuracy % (optional)", type:"number", ph:"e.g. 78"}
-  ], v => {
+  const f = [{k:"date", label:"Revised on", type:"date", value:today()}];
+  if (t.numerical) f.push({k:"qa", label:"PYQs attempted (required)", type:"number", ph:"e.g. 20"}, {k:"qc", label:"PYQs correct", type:"number", ph:"e.g. 15"});
+  else f.push({k:"acc", label:"Question accuracy % (optional)", type:"number", ph:"e.g. 78"});
+  sheet("Revision " + (t.done.length+1) + " done", f, v => {
     if (!v.date) return "Pick a date";
     const prev = t.done.length ? t.done[t.done.length-1] : t.studied;
     if (v.date < prev) return "Date is before the previous step (" + nice(prev) + ")";
-    if (v.acc !== "" && (isNaN(+v.acc) || +v.acc > 100)) return "Accuracy must be 0 to 100";
+    t.pyq = t.pyq || [];
+    if (t.numerical) {
+      const qa = Math.round(+v.qa), qc = Math.round(+v.qc || 0);
+      if (!(qa >= 1)) return "Numerical topic: solve its PYQs first, then enter how many";
+      if (qc > qa) return "Correct cannot be more than attempted";
+      t.pyq[t.done.length] = [qa, qc]; t.acc = Math.round(100*qc/qa);
+    } else {
+      if (v.acc !== "" && (isNaN(+v.acc) || +v.acc > 100)) return "Accuracy must be 0 to 100";
+      if (v.acc !== "") t.acc = +v.acc;
+    }
     t.done.push(v.date);
-    if (v.acc !== "") t.acc = +v.acc;
     const n = nextDue(t);
-    setTimeout(() => toast(n ? "Next revision: " + nice(n) : "All 5 revisions done"), 50);
-  }, {note:t.subject + " · " + t.topic, saveLabel:"Mark done"});
+    setTimeout(() => toast(n ? "Next revision: " + nice(n) : "All revisions done. Topic mastered!"), 50);
+  }, {note:t.subject + " · " + t.topic + (t.numerical ? " · numerical: PYQs are part of this revision" : ""), saveLabel:"Mark done"});
 }
 function editTopic(id){
   const t = S.topics.find(x => x.id === id); if (!t) return;
   sheet("Edit topic", [
     {k:"subject", label:"Subject", list:true, value:t.subject},
-    {k:"topic", label:"Topic / lecture", value:t.topic},
-    {k:"studied", label:"Studied on", type:"date", value:t.studied},
+    {k:"topic", label:"Topic / unit", value:t.topic},
+    {k:"kind", label:"Type", type:"select", options:KIND, value:KIND[t.numerical ? 1 : 0]},
+    {k:"started", label:"Started on", type:"date", value:t.started || t.studied},
+    {k:"days", label:"Days planned", type:"number", value:t.planDays || ""},
+    {k:"studied", label:"Finished on (leave empty if still studying)", type:"date", value:t.studied || ""},
     {k:"acc", label:"Last accuracy %", type:"number", value:t.acc==null?"":t.acc},
     {k:"undo", label:"Revisions done", type:"select", value:String(t.done.length),
       options:Array.from({length:t.done.length+1}, (_,i)=>String(i))}
   ], v => {
-    if (!v.subject || !v.topic || !v.studied) return "Fill subject, topic and date";
-    t.subject = v.subject; t.topic = v.topic; t.studied = v.studied;
-    t.acc = v.acc === "" ? null : +v.acc; t.done = t.done.slice(0, +v.undo);
+    if (!v.subject || !v.topic || !v.started) return "Fill subject, topic and start date";
+    if (v.studied && v.studied < v.started) return "Finish date is before the start date";
+    if (!v.studied && !(+v.days >= 1)) return "Give the days planned, or a finish date";
+    t.subject = v.subject; t.topic = v.topic; t.numerical = v.kind === KIND[1];
+    t.started = v.started; t.planDays = +v.days >= 1 ? Math.round(+v.days) : null; t.studied = v.studied || null;
+    t.acc = v.acc === "" ? null : +v.acc;
+    const keep = t.studied ? +v.undo : 0;
+    t.done = t.done.slice(0, keep); t.pyq = (t.pyq || []).slice(0, keep);
   }, {del:() => { S.topics = S.topics.filter(x => x.id !== id); }, note:"Lower 'Revisions done' to undo a revision marked by mistake."});
 }
 function reviseNow(id){
   const t = S.topics.find(x => x.id === id); if (!t) return;
-  S.draft = {type:"Revision", subject:t.subject, topic:t.topic + " (R" + (t.done.length+1) + ")"};
+  S.draft = {type:"Revision", subject:t.subject, topic:t.topic + " (R" + (t.done.length+1) + (t.numerical ? " + PYQs)" : ")")};
+  S.tab = "timer"; save(); render();
+}
+function studyNow(id){
+  const t = S.topics.find(x => x.id === id); if (!t) return;
+  S.draft = {type:"Study", subject:t.subject, topic:t.topic};
   S.tab = "timer"; save(); render();
 }
 function sessionForm(s){
@@ -413,28 +532,45 @@ const TABS = [["today","Today"],["timer","Timer"],["topics","Topics"],["log","Lo
 let logDate = today(), topicFilter = "All";
 
 function topicRow(t, withActions){
-  const st = status(t), nd = nextDue(t), n = t.done.length, g = S.settings.gaps.length;
+  const st = status(t), num = t.numerical ? " · Numerical" : "";
+  if (!t.studied) {
+    const day = daysBetween(t.started, today()) + 1, n = Math.max(1, t.planDays || 1);
+    return "<div class='item'><div class='row between'><div class='grow' data-edit='"+t.id+"'>"
+      + "<div class='title'>"+esc(t.topic)+"</div>"
+      + "<div class='small mute'>"+esc(t.subject)+num+" · "+(day < 1 ? "starts "+nice(t.started) : "day "+day+" of "+n)+" · finish by "+nice(planEnd(t))+"</div>"
+      + "<div class='bar"+(day > n ? " over" : "")+"'><i style='width:"+Math.min(100, Math.max(3, Math.round(100*day/n)))+"%'></i></div></div>"
+      + "<span class='chip "+st.k+"'>"+st.label+"</span></div>"
+      + (withActions ? "<div class='acts2'><button class='btn sm pri' data-study='"+t.id+"'>Study now</button><button class='btn sm' data-finish='"+t.id+"'>Finished</button><button class='btn sm' data-plan='"+t.id+"'>Change days</button></div>" : "")
+      + "</div>";
+  }
+  const nd = nextDue(t), n = t.done.length, g = S.settings.gaps.length;
   let dots = ""; for (let i=0;i<g;i++) dots += "<i class='"+(i<n?"d":(i===n&&nd&&nd<=today()?"n":""))+"'></i>";
   return "<div class='item'><div class='row between'><div class='grow' data-edit='"+t.id+"'>"
     + "<div class='title'>"+esc(t.topic)+"</div>"
-    + "<div class='small mute'>"+esc(t.subject)+" · "+(nd ? "R"+(n+1)+" due "+nice(nd) : "all revisions done")+(t.acc!=null?" · "+t.acc+"%":"")+"</div>"
+    + "<div class='small mute'>"+esc(t.subject)+num+" · "+(nd ? "R"+(n+1)+(t.numerical?" + PYQs":"")+" due "+nice(nd) : "all revisions done")+(t.acc!=null?" · "+t.acc+"%":"")+"</div>"
     + "<div class='dots'>"+dots+"</div></div>"
     + "<span class='chip "+st.k+"'>"+st.label+"</span></div>"
-    + (withActions && nd ? "<div class='row' style='margin-top:9px'><button class='btn sm pri' data-revise='"+t.id+"'>Revise now</button><button class='btn sm' data-done='"+t.id+"'>Mark done</button></div>" : "")
+    + (withActions && nd ? "<div class='acts2'><button class='btn sm pri' data-revise='"+t.id+"'>Revise now</button><button class='btn sm' data-done='"+t.id+"'>Mark done</button></div>" : "")
     + "</div>";
 }
 function viewToday(){
-  const due = dueList(), ss = sessOn(today()), min = sumMin(ss), tgt = (S.days[today()]&&S.days[today()].elh!=null ? S.days[today()].elh : S.settings.target)*60;
-  let h = "<div class='card'><h2>Today so far</h2><div class='stats'>"
+  const due = dueList(), now = studying(), ss = sessOn(today()), min = sumMin(ss), tgt = (S.days[today()]&&S.days[today()].elh!=null ? S.days[today()].elh : S.settings.target)*60;
+  const yMin = sumMin(sessOn(addDays(today(), -1)));
+  let h = "<div class='card'>" + levelBlock(game()) + "</div>";
+  h += "<div class='card'><h2>Today so far</h2><div class='stats'>"
     + "<div class='stat'><b>"+sumPomo(ss)+"</b><span>Pomodoros</span></div>"
     + "<div class='stat'><b>"+dur(min)+"</b><span>Studied of "+dur(tgt)+" target</span></div></div>"
+    + (yMin ? "<div class='small mute' style='margin-top:8px'>"+(min > yMin ? "You beat yesterday ("+dur(yMin)+")." : "Yesterday you studied "+dur(yMin)+". "+dur(yMin-min+1)+" more beats it.")+"</div>" : "")
     + "<button class='btn pri wide' style='margin-top:12px' data-go='timer'>"+(S.timer&&S.timer.running?"Open timer":"Start a Pomodoro")+"</button></div>";
   h += "<div class='card'><h2>Revise these first ("+due.length+")</h2>";
-  if (!due.length) h += "<div class='empty'>"+(S.topics.length ? "Nothing due. Study something new, then add it in Topics." : "No topics yet. After you study a lecture, add it in Topics and its revision dates will show up here.")+"</div>";
+  if (!due.length) h += "<div class='empty'>"+(S.topics.some(t=>t.studied) ? "No revision due today." : "Revisions appear here after you finish a topic.")+"</div>";
   else h += due.map(t => topicRow(t, true)).join("");
   h += "</div>";
+  h += "<div class='card'><h2>Studying now ("+now.length+")</h2>"
+    + (now.length ? now.map(t => topicRow(t, true)).join("") : "<div class='empty'>Pick the topic or unit you are starting and how many days you plan to take.</div>")
+    + "<button class='btn wide' style='margin-top:10px' data-add='topic'>Start a new topic</button></div>";
   const up = S.topics.filter(t => { const n = nextDue(t); return n && n > today(); }).sort((a,b)=>nextDue(a)<nextDue(b)?-1:1).slice(0,5);
-  if (up.length) h += "<div class='card'><h2>Coming up</h2>"+up.map(t=>topicRow(t,false)).join("")+"</div>";
+  if (up.length) h += "<div class='card'><h2>Revisions coming up</h2>"+up.map(t=>topicRow(t,false)).join("")+"</div>";
   return h;
 }
 function viewTimer(){
@@ -461,18 +597,18 @@ function viewTimer(){
   else h += "<button class='btn pri grow' data-t='start'>"+(fresh?"Start "+S.settings.pomo+" min focus":"Resume")+"</button>"+(fresh?"":"<button class='btn grow danger' data-t='stop'>"+(ph==="focus"?"Stop":"Skip break")+"</button>");
   h += "</div>";
   if (t && t.count && !running) h += "<button class='btn sm wide' style='margin-top:8px' data-t='reset'>Finish sitting (reset count)</button>";
-  h += "</div><div class='card'><h2>The rule</h2><div class='small mute'>"+S.settings.pomo+" min of full focus, then a "+S.settings.short+" min break. After "+S.settings.setSize+" Pomodoros take a "+S.settings.long+" min break. Phone face down. Each finished Pomodoro is logged for you. Keep this app open so the alarm rings on time.</div></div>";
+  h += "</div><div class='card'><h2>The rule</h2><div class='small mute'>"+S.settings.pomo+" min of full focus, then a "+S.settings.short+" min break. After "+S.settings.setSize+" Pomodoros take a "+S.settings.long+" min break. Phone face down. Each finished Pomodoro is logged for you and earns 10 XP. Keep this app open so the alarm rings on time.</div></div>";
   return h;
 }
 function viewTopics(){
   const subs = ["All"].concat([...new Set(S.topics.map(t=>t.subject))].sort());
   if (!subs.includes(topicFilter)) topicFilter = "All";
-  const list = S.topics.filter(t => topicFilter==="All" || t.subject===topicFilter)
-    .sort((a,b) => { const x = nextDue(a)||"9999", y = nextDue(b)||"9999"; return x<y?-1:x>y?1:0; });
+  const key = t => t.studied ? "1" + (nextDue(t) || "9999") : "0" + planEnd(t);
+  const list = S.topics.filter(t => topicFilter==="All" || t.subject===topicFilter).sort((a,b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
   let h = "";
   if (subs.length > 2) h += "<div class='card' style='padding:10px'><select id='tf'>"+subs.map(s=>"<option"+(s===topicFilter?" selected":"")+">"+esc(s)+"</option>").join("")+"</select></div>";
   h += "<div class='card'><h2>"+list.length+" topic"+(list.length===1?"":"s")+"</h2>";
-  h += list.length ? list.map(t=>topicRow(t, false)).join("") : "<div class='empty'>Tap + after you finish a new lecture or chapter. Tap a topic to edit it.</div>";
+  h += list.length ? list.map(t=>topicRow(t, !t.studied)).join("") : "<div class='empty'>Tap + when you start a new topic or unit. Tap a topic to edit it.</div>";
   h += "</div><button class='fab' data-add='topic' aria-label='Add topic'>+</button>";
   return h;
 }
@@ -506,7 +642,7 @@ function viewStats(){
   const act = sumMin(ms)/60, tgt = days*S.settings.target, acc = accOf(ms);
   let wasted = 0; Object.keys(S.days).forEach(k => { if (k.startsWith(pre)) wasted += (S.days[k].wt||0) + (S.days[k].wtm||0); });
   const studiedDays = new Set(ms.map(s=>s.date)).size;
-  let h = "<div class='card'><h2>"+now.toLocaleDateString(undefined,{month:"long",year:"numeric"})+"</h2><div class='stats'>"
+  let h = progressCard() + "<div class='card'><h2>"+now.toLocaleDateString(undefined,{month:"long",year:"numeric"})+"</h2><div class='stats'>"
     + "<div class='stat'><b>"+act.toFixed(1)+" h</b><span>Actual study hours</span></div>"
     + "<div class='stat'><b>"+tgt+" h</b><span>Target ("+days+" days × "+S.settings.target+" h)</span></div>"
     + "<div class='stat'><b>"+(tgt?Math.round(100*act/tgt):0)+"%</b><span>Efficiency (actual / target)</span></div>"
@@ -519,9 +655,10 @@ function viewStats(){
   const last = []; for (let i=6;i>=0;i--) { const d = addDays(today(), -i); last.push([d, sumMin(sessOn(d))/60]); }
   const mx = Math.max(S.settings.target, ...last.map(x=>x[1]), 1);
   h += "<div class='card'><h2>Last 7 days (hours)</h2><div class='bars'>"+last.map(x => "<div><b>"+(x[1]?x[1].toFixed(1):"")+"</b><i style='height:"+Math.round(78*x[1]/mx)+"px'></i>"+parse(x[0]).toLocaleDateString(undefined,{weekday:"short"})+"</div>").join("")+"</div></div>";
-  const c = {Mastered:0, Overdue:0, "Due today":0, Weak:0, Upcoming:0}; S.topics.forEach(t => c[status(t).label]++);
+  const c = {s:0, o:0, d:0, w:0, u:0, m:0};
+  S.topics.forEach(t => { if (!t.studied) { c.s++; return; } c[{Overdue:"o", "Due today":"d", Weak:"w", Upcoming:"u", Mastered:"m"}[status(t).label]]++; });
   h += "<div class='card'><h2>Topics</h2><div class='row' style='flex-wrap:wrap;gap:6px'>"
-    + "<span class='chip bad'>"+c.Overdue+" overdue</span><span class='chip warn'>"+c["Due today"]+" due today</span><span class='chip weak'>"+c.Weak+" weak</span><span class='chip'>"+c.Upcoming+" upcoming</span><span class='chip ok'>"+c.Mastered+" mastered</span></div></div>";
+    + "<span class='chip'>"+c.s+" studying</span><span class='chip bad'>"+c.o+" overdue</span><span class='chip warn'>"+c.d+" due today</span><span class='chip weak'>"+c.w+" weak</span><span class='chip'>"+c.u+" upcoming</span><span class='chip ok'>"+c.m+" mastered</span></div></div>";
   return h;
 }
 function render(){
@@ -536,12 +673,15 @@ function render(){
 
 /* ---------- events ---------- */
 document.addEventListener("click", e => {
-  const el = e.target.closest("[data-tab],[data-go],[data-revise],[data-done],[data-edit],[data-add],[data-t],[data-type],[data-sess],[data-day],[data-dayform]");
+  const el = e.target.closest("[data-tab],[data-go],[data-revise],[data-done],[data-study],[data-finish],[data-plan],[data-edit],[data-add],[data-t],[data-type],[data-sess],[data-day],[data-dayform]");
   if (!el || el.closest(".sheet")) return;
   const d = el.dataset;
   if (d.tab || d.go) { S.tab = d.tab || d.go; save(); render(); window.scrollTo(0,0); }
   else if (d.revise) reviseNow(d.revise);
   else if (d.done) markDone(d.done);
+  else if (d.study) studyNow(d.study);
+  else if (d.finish) finishTopic(d.finish);
+  else if (d.plan) planForm(d.plan);
   else if (d.edit) editTopic(d.edit);
   else if (d.add === "topic") addTopic();
   else if (d.add === "session") sessionForm(null);
