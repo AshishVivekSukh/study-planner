@@ -1,6 +1,6 @@
-# Study Planner
+# Topper Mode
 
-A Pomodoro and spaced-revision study planner that installs on a phone from the browser.
+**Phone down. Rank up.** A Pomodoro and spaced-revision study app for school, college and competitive-exam students. It installs on a phone from the browser.
 
 - **Today**: the revisions due today, oldest first
 - **Timer**: 25-minute Pomodoros with breaks; each one is logged automatically

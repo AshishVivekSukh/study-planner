@@ -1,7 +1,7 @@
 {
-  "name": "Study Planner - Pomodoro and Revision",
-  "short_name": "Study Planner",
-  "description": "Study in Pomodoros, log every session, and revise each topic on a spaced schedule.",
+  "name": "Topper Mode",
+  "short_name": "Topper Mode",
+  "description": "Phone down. Rank up. Pomodoro timer, spaced revision and study streaks for school, college and competitive-exam students.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -7,7 +7,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Study Planner</title>
+<title>Topper Mode</title>
+<meta name="apple-mobile-web-app-title" content="Topper Mode">
 <style>
 :root{
   --bg:#f4f6fb; --card:#ffffff; --ink:#172033; --mute:#667085; --line:#e3e7ef;
@@ -68,6 +69,26 @@ button:active{opacity:.75}
 .bdg.got{opacity:1;outline:2px solid var(--ok);color:var(--ink)}
 .bdg b{display:block;font-size:12.5px;color:var(--ink)}
 .acts2{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
+.tease{font-size:13px;color:var(--accent);font-weight:650;margin-top:9px}
+ul.tips{margin:4px 0 0;padding-left:18px} ul.tips li{margin:5px 0}
+#ob{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto}
+.obin{min-height:100%;max-width:520px;margin:0 auto;padding:26px 20px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column}
+.obin h2{font-size:25px;margin:6px 0 6px;line-height:1.2}
+.obin .lead{color:var(--mute);margin:0 0 14px}
+.hero{width:84px;height:84px;border-radius:22px;margin:22px 0 10px}
+.big{font-size:17px;font-weight:650;margin:14px 0 4px}
+.opt{display:block;width:100%;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0;font:inherit;color:var(--ink)}
+.opt.on{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand) inset}
+.opt b{display:block;font-size:15.5px} .opt span{font-size:12.5px;color:var(--mute)}
+ol.stepl{list-style:none;padding:0;margin:0;counter-reset:s}
+.stepl li{position:relative;padding:11px 0 11px 46px;border-top:1px solid var(--line);counter-increment:s}
+.stepl li:first-child{border-top:0}
+.stepl li:before{content:counter(s);position:absolute;left:0;top:11px;width:32px;height:32px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:flex;align-items:center;justify-content:center;font-weight:700}
+.stepl b{display:block} .stepl span{font-size:13px;color:var(--mute)}
+.obnav{margin-top:auto;padding-top:20px;display:flex;gap:10px}
+.obnav .btn{flex:1;min-height:46px}
+.obdots{display:flex;gap:6px;justify-content:center;margin-top:14px}
+.obdots i{width:7px;height:7px;border-radius:4px;background:var(--line)} .obdots i.on{background:var(--brand);width:20px}
 /* timer */
 .ring{position:relative;width:min(72vw,280px);aspect-ratio:1;margin:8px auto 14px}
 .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
@@ -104,7 +125,7 @@ input:focus,select:focus{outline:2px solid var(--brand);outline-offset:0}
 <body>
 <header>
   <div><h1 id="hTitle">Today</h1><div class="sub" id="hSub"></div></div>
-  <button class="btn sm" id="gear" aria-label="Settings">Settings</button>
+  <div class="row" style="gap:6px"><button class="btn sm" id="help" aria-label="Help" style="min-width:38px">?</button><button class="btn sm" id="gear" aria-label="Settings">Settings</button></div>
 </header>
 <main id="view"></main>
 <nav id="nav"></nav>
@@ -120,7 +141,8 @@ function load(){
   try { d = JSON.parse(localStorage.getItem(KEY)); } catch(e){}
   d = d || {};
   return { settings:Object.assign({}, DEF, d.settings||{}), topics:d.topics||[], sessions:d.sessions||[],
-           days:d.days||{}, timer:d.timer||null, tab:d.tab||"today", draft:d.draft||{type:"Study",subject:"",topic:""} };
+           days:d.days||{}, timer:d.timer||null, tab:d.tab||"today", draft:d.draft||{type:"Study",subject:"",topic:""},
+           profile:d.profile||null, onboarded:!!d.onboarded };
 }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){ toast("Could not save: storage is full or blocked"); } }
 
@@ -138,6 +160,138 @@ const niceLong = s => parse(s).toLocaleDateString(undefined, {weekday:"long", da
 const hm = ms => new Date(ms).toLocaleTimeString(undefined, {hour:"numeric", minute:"2-digit"});
 function dur(min){ min = Math.round(min); const h = Math.floor(min/60), m = min%60; return h ? h+"h "+pad(m)+"m" : m+"m"; }
 function toast(msg){ const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 2600); }
+
+/* ---------- student types: each gets its own strategy ---------- */
+const PROF = {
+  school:{label:"School student", sub:"Class 1 to 12", extra:"Your class (optional)", ph:"e.g. Class 10", target:4,
+    tips:["About 4 hours a day is enough: short daily sessions beat one long night.",
+          "Finish each chapter in the days you plan, then revise it on the dates the app gives.",
+          "Mark maths and science chapters as Numerical: every revision then includes practice questions from the textbook and sample papers.",
+          "Before a school test, the Revise list shows which chapters are fading."]},
+  college:{label:"College student", sub:"Preparing for semester exams", extra:"Your course (optional)", ph:"e.g. B.Tech Civil, 3rd year", target:5,
+    tips:["Plan each unit so it is finished before your internal or mid-semester exam.",
+          "Mark numerical units as Numerical: every revision then needs university PYQs of that unit.",
+          "In the week before exams, use full sittings of 4 Pomodoros to solve old question papers.",
+          "Aim for 5 hours a day; raise it as exams come closer."]},
+  both:{label:"College + competitive exam", sub:"Semester exams and GATE, ESE, SSC JE and similar", extra:"Which competitive exam?", ph:"e.g. GATE, SSC JE", target:7,
+    tips:["Study each unit once for both: concepts for the semester, numericals for the competitive exam.",
+          "Revise with competitive-exam PYQs: they also cover most university questions.",
+          "When a semester exam is near, give its subjects at least 2 Pomodoros a day.",
+          "Aim for 7 hours a day across both."]},
+  comp:{label:"Passed out, preparing for a competitive exam", sub:"Full-time preparation", extra:"Which exam?", ph:"e.g. GATE, ESE, SSC JE, state AE", target:10,
+    tips:["Treat it like a job: the same start time every day and a 10-hour target.",
+          "Mark every numerical topic as Numerical: each revision needs exam PYQs, and accuracy is tracked.",
+          "Take a full mock test every week and log it as PYQ / Test.",
+          "Topics marked Weak (below 60% accuracy) need extra PYQs before their next revision."]}
+};
+const ptype = () => (OB && OB.type) || (S.profile && S.profile.type) || "comp";
+const isSchool = () => ptype() === "school";
+const Q = () => isSchool() ? "practice questions" : "PYQs";
+const QC = () => isSchool() ? "Practice questions" : "PYQs";
+const Qs = () => isSchool() ? "practice Qs" : "PYQs";
+
+/* ---------- teasing and pride lines ---------- */
+const TEASE = ["Your phone can wait. Your rank can't.",
+  "Still scrolling? Someone with your syllabus just finished a Pomodoro.",
+  "Backbenchers make plans. Toppers press Start.",
+  "\"I'll start tomorrow\" has never cleared an exam.",
+  "Zero Pomodoros today. Your competition has already done three."];
+function dayLine(){
+  const n = sumPomo(sessOn(today())), i = Math.floor(parse(today()) / 86400000);
+  if (!n) return TEASE[i % TEASE.length];
+  const P = [n + " Pomodoro" + (n > 1 ? "s" : "") + " done. Toppers don't stop at one.",
+             "You showed up today. That's what toppers do.",
+             "Good. Now beat yesterday."];
+  return P[i % P.length];
+}
+
+/* ---------- help ---------- */
+const HELP = {
+  today:["Today", "This screen tells you what to do now.<ul class='tips'><li><b>Revise these first:</b> topics whose revision is due. Tap <b>Revise now</b> to open the timer, then <b>Mark done</b>.</li><li><b>Studying now:</b> topics you are learning, with the days you planned. Tap <b>Finished</b> when done: revisions then start by themselves.</li><li>Start each day here.</li></ul>"],
+  timer:["Timer", "<ul class='tips'><li>25 min focus, then a 5 min break. After 4 Pomodoros, a 15 min break.</li><li>Each finished Pomodoro is saved and gives 10 XP.</li><li>Keep the app open so the alarm rings on time. Phone face down.</li></ul>"],
+  topics:["Topics", "<ul class='tips'><li>Every topic you are studying or revising.</li><li><b>+</b> adds a new topic with the days you plan to take.</li><li>Tap a topic to edit it, change its type, or undo a revision marked by mistake.</li></ul>"],
+  log:["Log", "<ul class='tips'><li>Your sessions for any day. Tap one to add questions solved.</li><li><b>Day log:</b> sleep and wake time, target hours and wasted time. Fill it at night.</li><li>ALH = hours actually studied, ELH = target, TWT = total wasted time.</li></ul>"],
+  stats:["Stats", "<ul class='tips'><li>Level, XP, streak and badges show your progress.</li><li><b>Efficiency</b> = hours studied ÷ target hours.</li><li>Your plan for your student type is at the bottom.</li></ul>"]
+};
+function infoSheet(title, html){
+  const sc = document.createElement("div"); sc.className = "scrim";
+  sc.innerHTML = "<div class='sheet'><h3>"+esc(title)+"</h3><div style='margin-top:8px'>"+html+"</div>"
+    + "<div class='acts'><button class='btn' data-a='tour'>Replay walkthrough</button><button class='btn pri' data-a='close'>Got it</button></div></div>";
+  sc.addEventListener("click", e => {
+    const a = e.target.dataset && e.target.dataset.a;
+    if (e.target === sc || a === "close") sc.remove();
+    if (a === "tour") { sc.remove(); openOnboarding(); }
+  });
+  document.body.appendChild(sc);
+}
+function planCard(){
+  if (!S.profile) return "";
+  const P = PROF[S.profile.type];
+  return "<div class='card'><h2>Your plan · "+esc(P.label)+(S.profile.exam ? " · "+esc(S.profile.exam) : "")+"</h2><ul class='tips'>"
+    + P.tips.map(t => "<li>"+esc(t)+"</li>").join("") + "</ul><div class='small mute' style='margin-top:8px'>Change your student type in Settings.</div></div>";
+}
+
+/* ---------- first-run walkthrough ---------- */
+let OB = null;
+function openOnboarding(){
+  OB = {step:0, type:S.profile ? S.profile.type : null, exam:S.profile ? S.profile.exam : ""};
+  drawOb();
+}
+function drawOb(){
+  let el = $("#ob");
+  if (!el) {
+    el = document.createElement("div"); el.id = "ob"; document.body.appendChild(el);
+    el.addEventListener("click", obClick);
+    el.addEventListener("input", e => { if (e.target.id === "obExam") OB.exam = e.target.value; });
+  }
+  const st = OB.step, P = OB.type ? PROF[OB.type] : null, last = 3;
+  let h = "<div class='obin'>";
+  if (st === 0) {
+    h += "<img class='hero' src='icon-192.png' alt=''><h2>Topper Mode</h2><p class='lead'>Phone down. Rank up.</p>"
+      + "<p class='big'>Everyone says they'll start tomorrow. This app is for the ones who start today.</p>"
+      + "<ul class='tips'><li>Study in 25-minute focus sessions</li><li>Never forget a revision: the app reminds you when</li><li>Earn XP, keep your streak, climb from Backbencher to Topper</li></ul>"
+      + (S.topics.length || S.sessions.length ? "<p class='small mute' style='margin-top:14px'>Already using the app? Your data is safe. This takes 30 seconds.</p>" : "");
+  } else if (st === 1) {
+    h += "<h2>Who are you?</h2><p class='lead'>Your study plan depends on your answer. You can change it later.</p>";
+    h += Object.keys(PROF).map(k => "<button class='opt"+(OB.type===k?" on":"")+"' data-ob='type' data-v='"+k+"'><b>"+esc(PROF[k].label)+"</b><span>"+esc(PROF[k].sub)+"</span></button>").join("");
+    if (P) h += "<label for='obExam'>"+esc(P.extra)+"</label><input id='obExam' value='"+esc(OB.exam)+"' placeholder='"+esc(P.ph)+"'>";
+  } else if (st === 2) {
+    h += "<h2>How it works</h2><p class='lead'>Four habits. That's the whole app.</p><ol class='stepl'>"
+      + "<li><b>Start a topic</b><span>Pick a topic or unit and the number of days you need. Slow or fast is fine: change the days any time.</span></li>"
+      + "<li><b>Study with the timer</b><span>25 minutes of focus, then a short break. Every Pomodoro is saved and earns XP.</span></li>"
+      + "<li><b>Tap Finished</b><span>When the topic is done, its 5 revisions are scheduled: 1, 3, 7, 15 and 30 days apart.</span></li>"
+      + "<li><b>Revise when it is due</b><span>Today shows what to revise first. Numerical topics need "+Q()+" in every revision.</span></li></ol>";
+  } else {
+    h += "<h2>Your plan</h2><p class='lead'>"+esc(P ? P.label + (OB.exam ? " · " + OB.exam : "") : "")+"</p><ul class='tips'>"
+      + (P ? P.tips.map(t => "<li>"+esc(t)+"</li>").join("") : "") + "</ul>"
+      + "<div class='card'><b>Daily target: "+(P ? P.target : S.settings.target)+" hours</b><div class='small mute'>A starting point. Change it any time in Settings.</div></div>";
+  }
+  h += "<div class='obnav'>"
+    + (st === 0 ? "<button class='btn' data-ob='skip'>Skip</button>" : "<button class='btn' data-ob='back'>Back</button>")
+    + (st < last ? "<button class='btn pri' data-ob='next'>"+(st === 0 ? "Let's start" : "Next")+"</button>"
+                 : "<button class='btn pri' data-ob='done'>"+(S.topics.length ? "Let's go" : "Start my first topic")+"</button>")
+    + "</div><div class='obdots'>"+[0,1,2,3].map(i => "<i class='"+(i===st?"on":"")+"'></i>").join("")+"</div></div>";
+  el.innerHTML = h; el.scrollTop = 0;
+}
+function obClick(e){
+  const b = e.target.closest("[data-ob]"); if (!b) return;
+  const a = b.dataset.ob;
+  if (a === "type") { OB.type = b.dataset.v; drawOb(); const i = $("#obExam"); if (i) i.focus({preventScroll:true}); return; }
+  if (a === "back") { OB.step--; return drawOb(); }
+  if (a === "next") { if (OB.step === 1 && !OB.type) return toast("Pick one to continue"); OB.step++; return drawOb(); }
+  if (a === "skip" || a === "done") finishOb(a === "done");
+}
+function finishOb(firstTopic){
+  if (OB.type) {
+    const changed = !S.profile || S.profile.type !== OB.type;
+    S.profile = {type:OB.type, exam:(OB.exam || "").trim()};
+    if (changed) S.settings.target = PROF[OB.type].target;
+  }
+  S.onboarded = true; OB = null;
+  const el = $("#ob"); if (el) el.remove();
+  S.tab = "today"; save(); render(); window.scrollTo(0,0);
+  if (firstTopic && !S.topics.length) addTopic();
+}
 
 /* ---------- revision logic ---------- */
 const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
@@ -170,7 +324,7 @@ function accOf(a){ const q = a.reduce((x,s)=>x+(s.qa||0),0), c = a.reduce((x,s)=
 const subjects = () => [...new Set(S.topics.map(t=>t.subject).concat(S.sessions.map(s=>s.subject)).filter(Boolean))].sort();
 
 /* ---------- progress game (all derived from the data, nothing stored) ---------- */
-const TITLES = ["Beginner","Learner","Focused","Consistent","Dedicated","Scholar","Achiever","Expert","Master","Topper"];
+const TITLES = ["Backbencher","Late Starter","Warming Up","Regular","Focused","Grinder","Front Bencher","Rank Holder","Gold Medalist","Topper"];
 function game(){
   const g = S.settings.gaps, byDay = {};
   S.sessions.forEach(s => { byDay[s.date] = (byDay[s.date]||0) + s.min; });
@@ -204,7 +358,7 @@ function game(){
   return {xp, lvl, lo, hi, pct:Math.round(100*(xp-lo)/(hi-lo)), title:TITLES[Math.min(lvl, TITLES.length)-1], streak, best, revOn, revAll, finOn, finAll, mastered, acc, badges};
 }
 function levelBlock(G){
-  return "<div class='row between'><div class='title'>Level "+G.lvl+" · "+G.title+"</div><span class='chip"+(G.streak?" ok":"")+"'>"+G.streak+"-day streak</span></div>"
+  return "<div class='row between'><div class='title'>Level "+G.lvl+" · "+G.title+"</div><span class='chip"+(G.streak?" ok":"")+"'>"+(G.streak ? G.streak+"-day streak" : "No streak yet")+"</span></div>"
     + "<div class='bar xp'><i style='width:"+G.pct+"%'></i></div><div class='small mute' style='margin-top:5px'>"+G.xp+" XP · "+(G.hi-G.xp)+" more to reach Level "+(G.lvl+1)+"</div>";
 }
 function progressCard(){
@@ -255,18 +409,18 @@ function sheet(title, fields, onSave, opts={}){
 }
 
 /* ---------- actions ---------- */
-const KIND = ["Theory", "Numerical (solve PYQs in every revision)"];
+const kindOpts = () => ["Theory", "Numerical (solve " + Q() + " in every revision)"];
 function addTopic(){
   sheet("New topic or unit", [
-    {k:"subject", label:"Subject", list:true, ph:"e.g. Steel Structure"},
-    {k:"topic", label:"Topic / unit", ph:"e.g. Compression Members"},
-    {k:"kind", label:"Type", type:"select", options:KIND, value:KIND[0]},
+    {k:"subject", label:"Subject", list:true, ph:isSchool() ? "e.g. Maths" : "e.g. Steel Structure"},
+    {k:"topic", label:isSchool() ? "Chapter" : "Topic / unit", ph:isSchool() ? "e.g. Ch 4 - Quadratic Equations" : "e.g. Compression Members"},
+    {k:"days", label:"Days you plan to take", type:"number", value:7},
+    {k:"kind", label:"Type", type:"select", options:kindOpts(), value:kindOpts()[0]},
     {k:"where", label:"Where are you?", type:"select", options:["Starting it now","Already finished it"], value:"Starting it now"},
-    {k:"date", label:"Start date (finish date, if already finished)", type:"date", value:today()},
-    {k:"days", label:"Days you plan to take", type:"number", value:7}
+    {k:"date", label:"Start date (finish date, if already finished)", type:"date", value:today()}
   ], v => {
     if (!v.subject || !v.topic || !v.date) return "Fill subject, topic and date";
-    const o = {id:uid(), subject:v.subject, topic:v.topic, numerical:v.kind === KIND[1], started:v.date, planDays:null, studied:null, done:[], pyq:[], acc:null};
+    const o = {id:uid(), subject:v.subject, topic:v.topic, numerical:v.kind === kindOpts()[1], started:v.date, planDays:null, studied:null, done:[], pyq:[], acc:null};
     if (v.where === "Already finished it") o.studied = v.date;
     else { if (!(+v.days >= 1)) return "Days planned must be 1 or more"; o.planDays = Math.round(+v.days); }
     S.topics.push(o);
@@ -293,12 +447,12 @@ function finishTopic(id){
     t.studied = v.date; t.done = []; t.pyq = [];
     const took = daysBetween(t.started, v.date) + 1;
     setTimeout(() => toast("Done in " + took + " of " + (t.planDays||took) + " planned days. First revision: " + nice(nextDue(t))), 50);
-  }, {note:t.subject + " · " + t.topic + ". Revisions begin now" + (t.numerical ? ", each with PYQs of this topic." : "."), saveLabel:"Mark finished"});
+  }, {note:t.subject + " · " + t.topic + ". Revisions begin now" + (t.numerical ? ", each with " + Q() + " of this topic." : "."), saveLabel:"Mark finished"});
 }
 function markDone(id){
   const t = S.topics.find(x => x.id === id); if (!t) return;
   const f = [{k:"date", label:"Revised on", type:"date", value:today()}];
-  if (t.numerical) f.push({k:"qa", label:"PYQs attempted (required)", type:"number", ph:"e.g. 20"}, {k:"qc", label:"PYQs correct", type:"number", ph:"e.g. 15"});
+  if (t.numerical) f.push({k:"qa", label:QC() + " attempted (required)", type:"number", ph:"e.g. 20"}, {k:"qc", label:QC() + " correct", type:"number", ph:"e.g. 15"});
   else f.push({k:"acc", label:"Question accuracy % (optional)", type:"number", ph:"e.g. 78"});
   sheet("Revision " + (t.done.length+1) + " done", f, v => {
     if (!v.date) return "Pick a date";
@@ -307,7 +461,7 @@ function markDone(id){
     t.pyq = t.pyq || [];
     if (t.numerical) {
       const qa = Math.round(+v.qa), qc = Math.round(+v.qc || 0);
-      if (!(qa >= 1)) return "Numerical topic: solve its PYQs first, then enter how many";
+      if (!(qa >= 1)) return "Numerical topic: solve its " + Q() + " first, then enter how many";
       if (qc > qa) return "Correct cannot be more than attempted";
       t.pyq[t.done.length] = [qa, qc]; t.acc = Math.round(100*qc/qa);
     } else {
@@ -317,14 +471,14 @@ function markDone(id){
     t.done.push(v.date);
     const n = nextDue(t);
     setTimeout(() => toast(n ? "Next revision: " + nice(n) : "All revisions done. Topic mastered!"), 50);
-  }, {note:t.subject + " · " + t.topic + (t.numerical ? " · numerical: PYQs are part of this revision" : ""), saveLabel:"Mark done"});
+  }, {note:t.subject + " · " + t.topic + (t.numerical ? " · numerical: " + Q() + " are part of this revision" : ""), saveLabel:"Mark done"});
 }
 function editTopic(id){
   const t = S.topics.find(x => x.id === id); if (!t) return;
   sheet("Edit topic", [
     {k:"subject", label:"Subject", list:true, value:t.subject},
     {k:"topic", label:"Topic / unit", value:t.topic},
-    {k:"kind", label:"Type", type:"select", options:KIND, value:KIND[t.numerical ? 1 : 0]},
+    {k:"kind", label:"Type", type:"select", options:kindOpts(), value:kindOpts()[t.numerical ? 1 : 0]},
     {k:"started", label:"Started on", type:"date", value:t.started || t.studied},
     {k:"days", label:"Days planned", type:"number", value:t.planDays || ""},
     {k:"studied", label:"Finished on (leave empty if still studying)", type:"date", value:t.studied || ""},
@@ -335,7 +489,7 @@ function editTopic(id){
     if (!v.subject || !v.topic || !v.started) return "Fill subject, topic and start date";
     if (v.studied && v.studied < v.started) return "Finish date is before the start date";
     if (!v.studied && !(+v.days >= 1)) return "Give the days planned, or a finish date";
-    t.subject = v.subject; t.topic = v.topic; t.numerical = v.kind === KIND[1];
+    t.subject = v.subject; t.topic = v.topic; t.numerical = v.kind === kindOpts()[1];
     t.started = v.started; t.planDays = +v.days >= 1 ? Math.round(+v.days) : null; t.studied = v.studied || null;
     t.acc = v.acc === "" ? null : +v.acc;
     const keep = t.studied ? +v.undo : 0;
@@ -344,7 +498,7 @@ function editTopic(id){
 }
 function reviseNow(id){
   const t = S.topics.find(x => x.id === id); if (!t) return;
-  S.draft = {type:"Revision", subject:t.subject, topic:t.topic + " (R" + (t.done.length+1) + (t.numerical ? " + PYQs)" : ")")};
+  S.draft = {type:"Revision", subject:t.subject, topic:t.topic + " (R" + (t.done.length+1) + (t.numerical ? " + " + Qs() + ")" : ")")};
   S.tab = "timer"; save(); render();
 }
 function studyNow(id){
@@ -395,7 +549,10 @@ function dayForm(d){
 }
 function settingsForm(){
   const s = S.settings;
+  const pk = Object.keys(PROF), cur = S.profile ? S.profile.type : "comp";
   sheet("Settings", [
+    {k:"who", label:"I am a", type:"select", options:pk.map(k => PROF[k].label), value:PROF[cur].label},
+    {k:"exam", label:"Exam, class or course", value:S.profile ? S.profile.exam : "", ph:PROF[cur].ph},
     {k:"pomo", label:"Pomodoro length (minutes)", type:"number", value:s.pomo},
     {k:"short", label:"Short break (minutes)", type:"number", value:s.short},
     {k:"long", label:"Long break (minutes)", type:"number", value:s.long},
@@ -404,11 +561,13 @@ function settingsForm(){
     {k:"gaps", label:"Revision gaps in days (R1 to R5)", value:s.gaps.join(", ")},
     {k:"weak", label:"Weak accuracy line (%)", type:"number", value:s.weak},
     {k:"wake", label:"Keep screen on during a Pomodoro", type:"select", options:["Yes","No"], value:s.wake?"Yes":"No"},
-    {k:"data", label:"Backup", type:"select", options:["No action","Download backup file","Restore from backup file","Erase all my data"], value:"No action"}
+    {k:"data", label:"Backup", type:"select", options:["No action","Show the walkthrough again","Download backup file","Restore from backup file","Erase all my data"], value:"No action"}
   ], v => {
     const g = v.gaps.split(/[,\s]+/).map(Number).filter(n => n > 0);
     if (g.length < 1) return "Give at least one revision gap";
     for (const k of ["pomo","short","long","setSize","target"]) if (!(+v[k] > 0)) return "Numbers must be more than 0";
+    S.profile = {type:pk.find(k => PROF[k].label === v.who) || "comp", exam:v.exam};
+    if (v.data === "Show the walkthrough again") setTimeout(openOnboarding, 0);
     Object.assign(s, {pomo:+v.pomo, short:+v.short, long:+v.long, setSize:Math.round(+v.setSize), target:+v.target, gaps:g, weak:+v.weak||0, wake:v.wake==="Yes"});
     if (v.data === "Download backup file") exportData();
     if (v.data === "Restore from backup file") importData();
@@ -419,7 +578,7 @@ function settingsForm(){
 }
 function exportData(){
   const blob = new Blob([JSON.stringify({settings:S.settings, topics:S.topics, sessions:S.sessions, days:S.days}, null, 1)], {type:"application/json"});
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "study-planner-backup-" + today() + ".json";
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "topper-mode-backup-" + today() + ".json";
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 function importData(){
@@ -432,7 +591,7 @@ function importData(){
         if (!confirm("Replace the data on this phone with the backup (" + d.topics.length + " topics, " + d.sessions.length + " sessions)?")) return;
         S.topics = d.topics; S.sessions = d.sessions; S.days = d.days || {}; S.settings = Object.assign({}, DEF, d.settings||{});
         save(); render(); toast("Backup restored");
-      } catch(e){ toast("That file is not a Study Planner backup"); } };
+      } catch(e){ toast("That file is not a Topper Mode backup"); } };
     r.readAsText(f); };
   i.click();
 }
@@ -517,7 +676,7 @@ function paintClock(){
   const s = Math.ceil(left/1000);
   el.textContent = pad(Math.floor(s/60)) + ":" + pad(s%60);
   const C = 2*Math.PI*45; $("#pg").style.strokeDashoffset = C * (1 - left/total);
-  document.title = (t && t.running ? el.textContent + " · " : "") + "Study Planner";
+  document.title = (t && t.running ? el.textContent + " · " : "") + "Topper Mode";
 }
 
 /* ---------- views ---------- */
@@ -547,7 +706,7 @@ function topicRow(t, withActions){
   let dots = ""; for (let i=0;i<g;i++) dots += "<i class='"+(i<n?"d":(i===n&&nd&&nd<=today()?"n":""))+"'></i>";
   return "<div class='item'><div class='row between'><div class='grow' data-edit='"+t.id+"'>"
     + "<div class='title'>"+esc(t.topic)+"</div>"
-    + "<div class='small mute'>"+esc(t.subject)+num+" · "+(nd ? "R"+(n+1)+(t.numerical?" + PYQs":"")+" due "+nice(nd) : "all revisions done")+(t.acc!=null?" · "+t.acc+"%":"")+"</div>"
+    + "<div class='small mute'>"+esc(t.subject)+num+" · "+(nd ? "R"+(n+1)+(t.numerical?" + "+Qs():"")+" due "+nice(nd) : "all revisions done")+(t.acc!=null?" · "+t.acc+"%":"")+"</div>"
     + "<div class='dots'>"+dots+"</div></div>"
     + "<span class='chip "+st.k+"'>"+st.label+"</span></div>"
     + (withActions && nd ? "<div class='acts2'><button class='btn sm pri' data-revise='"+t.id+"'>Revise now</button><button class='btn sm' data-done='"+t.id+"'>Mark done</button></div>" : "")
@@ -556,7 +715,10 @@ function topicRow(t, withActions){
 function viewToday(){
   const due = dueList(), now = studying(), ss = sessOn(today()), min = sumMin(ss), tgt = (S.days[today()]&&S.days[today()].elh!=null ? S.days[today()].elh : S.settings.target)*60;
   const yMin = sumMin(sessOn(addDays(today(), -1)));
-  let h = "<div class='card'>" + levelBlock(game()) + "</div>";
+  let h = "<div class='card'>" + levelBlock(game()) + "<div class='tease'>" + esc(dayLine()) + "</div></div>";
+  if (!S.topics.length) h += "<div class='card'><h2>Step 1</h2><div class='big' style='margin-top:0'>Start your first topic</div>"
+    + "<div class='small mute'>Pick what you are studying now and how many days you need. Everything else follows from it.</div>"
+    + "<button class='btn pri wide' style='margin-top:12px' data-add='topic'>Start a topic</button></div>";
   h += "<div class='card'><h2>Today so far</h2><div class='stats'>"
     + "<div class='stat'><b>"+sumPomo(ss)+"</b><span>Pomodoros</span></div>"
     + "<div class='stat'><b>"+dur(min)+"</b><span>Studied of "+dur(tgt)+" target</span></div></div>"
@@ -567,7 +729,7 @@ function viewToday(){
   else h += due.map(t => topicRow(t, true)).join("");
   h += "</div>";
   h += "<div class='card'><h2>Studying now ("+now.length+")</h2>"
-    + (now.length ? now.map(t => topicRow(t, true)).join("") : "<div class='empty'>Pick the topic or unit you are starting and how many days you plan to take.</div>")
+    + (now.length ? now.map(t => topicRow(t, true)).join("") : "<div class='empty'>Nothing in progress. Start the next topic or unit.</div>")
     + "<button class='btn wide' style='margin-top:10px' data-add='topic'>Start a new topic</button></div>";
   const up = S.topics.filter(t => { const n = nextDue(t); return n && n > today(); }).sort((a,b)=>nextDue(a)<nextDue(b)?-1:1).slice(0,5);
   if (up.length) h += "<div class='card'><h2>Revisions coming up</h2>"+up.map(t=>topicRow(t,false)).join("")+"</div>";
@@ -658,7 +820,7 @@ function viewStats(){
   const c = {s:0, o:0, d:0, w:0, u:0, m:0};
   S.topics.forEach(t => { if (!t.studied) { c.s++; return; } c[{Overdue:"o", "Due today":"d", Weak:"w", Upcoming:"u", Mastered:"m"}[status(t).label]]++; });
   h += "<div class='card'><h2>Topics</h2><div class='row' style='flex-wrap:wrap;gap:6px'>"
-    + "<span class='chip'>"+c.s+" studying</span><span class='chip bad'>"+c.o+" overdue</span><span class='chip warn'>"+c.d+" due today</span><span class='chip weak'>"+c.w+" weak</span><span class='chip'>"+c.u+" upcoming</span><span class='chip ok'>"+c.m+" mastered</span></div></div>";
+    + "<span class='chip'>"+c.s+" studying</span><span class='chip bad'>"+c.o+" overdue</span><span class='chip warn'>"+c.d+" due today</span><span class='chip weak'>"+c.w+" weak</span><span class='chip'>"+c.u+" upcoming</span><span class='chip ok'>"+c.m+" mastered</span></div></div>" + planCard();
   return h;
 }
 function render(){
@@ -668,7 +830,7 @@ function render(){
   $("#view").innerHTML = v();
   const n = dueList().length;
   $("#nav").innerHTML = TABS.map(t => "<button class='"+(t[0]===S.tab?"on":"")+"' data-tab='"+t[0]+"'>"+ICON[t[0]]+t[1]+(t[0]==="today"&&n?"<span class='badge'>"+n+"</span>":"")+"</button>").join("");
-  if (S.tab === "timer") paintClock(); else document.title = "Study Planner";
+  if (S.tab === "timer") paintClock(); else document.title = "Topper Mode";
 }
 
 /* ---------- events ---------- */
@@ -703,8 +865,10 @@ document.addEventListener("change", e => {
   if (e.target.id === "tf") { topicFilter = e.target.value; render(); }
 });
 $("#gear").addEventListener("click", settingsForm);
+$("#help").addEventListener("click", () => { const x = HELP[S.tab] || HELP.today; infoSheet(x[0], x[1]); });
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
 render();
+if (!S.onboarded) openOnboarding();
 </script>
 </body>
 </html>
