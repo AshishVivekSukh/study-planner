@@ -166,21 +166,21 @@ const PROF = {
   school:{label:"School student", sub:"Class 1 to 12", extra:"Your class (optional)", ph:"e.g. Class 10", target:4,
     tips:["About 4 hours a day is enough: short daily sessions beat one long night.",
           "Finish each chapter in the days you plan, then revise it on the dates the app gives.",
-          "Mark maths and science chapters as Numerical: every revision then includes practice questions from the textbook and sample papers.",
+          "Mark maths and science chapters as Numerical: they get extra days, first for theory, then for practice questions.",
           "Before a school test, the Revise list shows which chapters are fading."]},
   college:{label:"College student", sub:"Preparing for semester exams", extra:"Your course (optional)", ph:"e.g. B.Tech Civil, 3rd year", target:5,
     tips:["Plan each unit so it is finished before your internal or mid-semester exam.",
-          "Mark numerical units as Numerical: every revision then needs university PYQs of that unit.",
-          "In the week before exams, use full sittings of 4 Pomodoros to solve old question papers.",
+          "Every revision includes university PYQs of that unit. Numerical units get extra days for solving.",
+          "In the week before exams, use full sittings of 4 Grinds to solve old question papers.",
           "Aim for 5 hours a day; raise it as exams come closer."]},
   both:{label:"College + competitive exam", sub:"Semester exams and GATE, ESE, SSC JE and similar", extra:"Which competitive exam?", ph:"e.g. GATE, SSC JE", target:7,
     tips:["Study each unit once for both: concepts for the semester, numericals for the competitive exam.",
           "Revise with competitive-exam PYQs: they also cover most university questions.",
-          "When a semester exam is near, give its subjects at least 2 Pomodoros a day.",
+          "When a semester exam is near, give its subjects at least 2 Grinds a day.",
           "Aim for 7 hours a day across both."]},
   comp:{label:"Passed out, preparing for a competitive exam", sub:"Full-time preparation", extra:"Which exam?", ph:"e.g. GATE, ESE, SSC JE, state AE", target:10,
     tips:["Treat it like a job: the same start time every day and a 10-hour target.",
-          "Mark every numerical topic as Numerical: each revision needs exam PYQs, and accuracy is tracked.",
+          "Every revision includes exam PYQs and your accuracy is tracked. Numerical topics get extra days for practice.",
           "Take a full mock test every week and log it as PYQ / Test.",
           "Topics marked Weak (below 60% accuracy) need extra PYQs before their next revision."]}
 };
@@ -192,14 +192,14 @@ const Qs = () => isSchool() ? "practice Qs" : "PYQs";
 
 /* ---------- teasing and pride lines ---------- */
 const TEASE = ["Your phone can wait. Your rank can't.",
-  "Still scrolling? Someone with your syllabus just finished a Pomodoro.",
+  "Still scrolling? Someone with your syllabus just finished a Grind.",
   "Backbenchers make plans. Toppers press Start.",
   "\"I'll start tomorrow\" has never cleared an exam.",
-  "Zero Pomodoros today. Your competition has already done three."];
+  "Zero Grinds today. Your competition has already done three."];
 function dayLine(){
   const n = sumPomo(sessOn(today())), i = Math.floor(parse(today()) / 86400000);
   if (!n) return TEASE[i % TEASE.length];
-  const P = [n + " Pomodoro" + (n > 1 ? "s" : "") + " done. Toppers don't stop at one.",
+  const P = [n + " Grind" + (n > 1 ? "s" : "") + " done. Toppers don't stop at one.",
              "You showed up today. That's what toppers do.",
              "Good. Now beat yesterday."];
   return P[i % P.length];
@@ -208,7 +208,7 @@ function dayLine(){
 /* ---------- help ---------- */
 const HELP = {
   today:["Today", "This screen tells you what to do now.<ul class='tips'><li><b>Revise these first:</b> topics whose revision is due. Tap <b>Revise now</b> to open the timer, then <b>Mark done</b>.</li><li><b>Studying now:</b> topics you are learning, with the days you planned. Tap <b>Finished</b> when done: revisions then start by themselves.</li><li>Start each day here.</li></ul>"],
-  timer:["Timer", "<ul class='tips'><li>25 min focus, then a 5 min break. After 4 Pomodoros, a 15 min break.</li><li>Each finished Pomodoro is saved and gives 10 XP.</li><li>Keep the app open so the alarm rings on time. Phone face down.</li></ul>"],
+  timer:["Timer", "<ul class='tips'><li>One Grind = 25 min of full focus, then a 5 min break. After 4 Grinds, a 15 min break.</li><li>Each finished Grind is saved and gives 10 XP.</li><li>Keep the app open so the alarm rings on time. Phone face down.</li></ul>"],
   topics:["Topics", "<ul class='tips'><li>Every topic you are studying or revising.</li><li><b>+</b> adds a new topic with the days you plan to take.</li><li>Tap a topic to edit it, change its type, or undo a revision marked by mistake.</li></ul>"],
   log:["Log", "<ul class='tips'><li>Your sessions for any day. Tap one to add questions solved.</li><li><b>Day log:</b> sleep and wake time, target hours and wasted time. Fill it at night.</li><li>ALH = hours actually studied, ELH = target, TWT = total wasted time.</li></ul>"],
   stats:["Stats", "<ul class='tips'><li>Level, XP, streak and badges show your progress.</li><li><b>Efficiency</b> = hours studied ÷ target hours.</li><li>Your plan for your student type is at the bottom.</li></ul>"]
@@ -258,9 +258,9 @@ function drawOb(){
   } else if (st === 2) {
     h += "<h2>How it works</h2><p class='lead'>Four habits. That's the whole app.</p><ol class='stepl'>"
       + "<li><b>Start a topic</b><span>Pick a topic or unit and the number of days you need. Slow or fast is fine: change the days any time.</span></li>"
-      + "<li><b>Study with the timer</b><span>25 minutes of focus, then a short break. Every Pomodoro is saved and earns XP.</span></li>"
+      + "<li><b>Study with the timer</b><span>One Grind = 25 minutes of full focus, then a short break. Every Grind is saved and earns XP.</span></li>"
       + "<li><b>Tap Finished</b><span>When the topic is done, its 5 revisions are scheduled: 1, 3, 7, 15 and 30 days apart.</span></li>"
-      + "<li><b>Revise when it is due</b><span>Today shows what to revise first. Numerical topics need "+Q()+" in every revision.</span></li></ol>";
+      + "<li><b>Revise when it is due</b><span>Today shows what to revise first. Every revision includes "+Q()+" of that topic.</span></li></ol>";
   } else {
     h += "<h2>Your plan</h2><p class='lead'>"+esc(P ? P.label + (OB.exam ? " · " + OB.exam : "") : "")+"</p><ul class='tips'>"
       + (P ? P.tips.map(t => "<li>"+esc(t)+"</li>").join("") : "") + "</ul>"
@@ -297,6 +297,19 @@ function finishOb(firstTopic){
 const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
 const planEnd = t => addDays(t.started || t.studied, Math.max(1, t.planDays || 1) - 1);
 const studying = () => S.topics.filter(t => !t.studied).sort((a,b) => planEnd(a) < planEnd(b) ? -1 : 1);
+const KINDS = {theory:"Theory", both:"Theory + numerical", numerical:"Numerical"};
+const kindOf = t => t.kind || (t.numerical ? "numerical" : "theory");
+const SUGGEST = {theory:5, both:7, numerical:9};          // suggested study days per type
+const REV_GRINDS = {theory:1, both:2, numerical:2};       // suggested Grinds per revision
+// Split the planned days: theory first, then numericals + PYQs.
+function phases(kind, n){
+  n = Math.max(1, n);
+  if (kind === "theory" || n === 1) return [n, 0];
+  const th = kind === "both" ? Math.ceil(n/2) : Math.max(1, Math.round(n*0.4));
+  return [th, n - th];
+}
+// Revision dates if the topic is finished on `fin` and every revision is done on time.
+const revPlan = fin => { const out = []; let d = fin; S.settings.gaps.forEach(g => { d = addDays(d, g); out.push(d); }); return out; };
 function nextDue(t){
   if (!t.studied) return null;                 // revisions start only after the topic is finished
   const g = S.settings.gaps, n = t.done.length;
@@ -306,6 +319,7 @@ function nextDue(t){
 function status(t){
   const nd = nextDue(t), td = today();
   if (!t.studied) {
+    if (td < t.started) return {k:"", label:daysBetween(td, t.started) === 1 ? "Starts tomorrow" : "Starts " + nice(t.started)};
     const over = daysBetween(planEnd(t), td);
     return over > 0 ? {k:"bad", label:over + (over === 1 ? " day over" : " days over")} : over === 0 ? {k:"warn", label:"Last day"} : {k:"", label:"Studying"};
   }
@@ -350,7 +364,7 @@ function game(){
   const lo = 100*(lvl-1)*lvl, hi = 100*lvl*(lvl+1);
   const acc = qa ? Math.round(100*qc/qa) : null;
   const badges = [
-    ["First Pomodoro", "Finish 1 Pomodoro", pomos >= 1], ["25 Pomodoros", "Finish 25", pomos >= 25], ["100 Pomodoros", "Finish 100", pomos >= 100],
+    ["First Grind", "Finish 1 Grind", pomos >= 1], ["25 Grinds", "Finish 25", pomos >= 25], ["100 Grinds", "Finish 100", pomos >= 100],
     ["3-day streak", "Study 3 days in a row", best >= 3], ["7-day streak", "Study 7 days in a row", best >= 7], ["30-day streak", "Study 30 days in a row", best >= 30],
     ["Finisher", "Finish a topic", fin >= 1], ["On plan", "Finish a topic within your planned days", finOn >= 1], ["On-time reviser", "Do 5 revisions on their due date", revOn >= 5],
     ["Mastered", "Complete all revisions of a topic", mastered >= 1], ["Target day", "Reach your daily target hours", targetDays >= 1], ["Sharp solver", "80%+ on 20 or more questions", qa >= 20 && acc >= 80]
@@ -372,7 +386,7 @@ function progressCard(){
     + "<div class='stat'><b>"+G.revOn+" of "+G.revAll+"</b><span>Revisions done on time</span></div>"
     + "<div class='stat'><b>"+G.mastered+"</b><span>Topics mastered</span></div></div>"
     + "<div class='badges'>"+G.badges.map(x => "<div class='bdg"+(x[2]?" got":"")+"'><b>"+x[0]+"</b>"+x[1]+"</div>").join("")+"</div>"
-    + "<div class='small mute' style='margin-top:10px'>XP: 10 per Pomodoro · 50 for finishing a topic within plan (25 if late) · 20 per on-time revision (10 if late) · 100 per mastered topic · 30 for a target day · 1 per correct question.</div></div>";
+    + "<div class='small mute' style='margin-top:10px'>XP: 10 per Grind · 50 for finishing a topic within plan (25 if late) · 20 per on-time revision (10 if late) · 100 per mastered topic · 30 for a target day · 1 per correct question.</div></div>";
 }
 
 /* ---------- generic bottom sheet form ---------- */
@@ -388,10 +402,12 @@ function sheet(title, fields, onSave, opts={}){
       + (f.ph?" placeholder='"+esc(f.ph)+"'":"") + (f.list?" list='subjList'":"")
       + (f.type==="number"?" inputmode='decimal' step='any' min='0'":"") + ">";
   });
+  if (opts.live) h += "<div class='card' id='liveBox' style='margin:14px 0 0'></div>";
   h += "<div class='acts'><button class='btn' data-a='cancel'>Cancel</button>";
   if (opts.del) h += "<button class='btn danger' data-a='del'>Delete</button>";
   h += "<button class='btn pri' data-a='save'>"+esc(opts.saveLabel||"Save")+"</button></div>";
   sh.innerHTML = h;
+  if (opts.live) { const up = e => opts.live(sh, e); sh.addEventListener("input", up); sh.addEventListener("change", up); up(null); }
   const close = () => sc.remove();
   sc.addEventListener("click", e => {
     if (e.target === sc) return close();
@@ -409,22 +425,50 @@ function sheet(title, fields, onSave, opts={}){
 }
 
 /* ---------- actions ---------- */
-const kindOpts = () => ["Theory", "Numerical (solve " + Q() + " in every revision)"];
+const kindOpts = () => Object.values(KINDS);
+const kindKey = label => Object.keys(KINDS).find(k => KINDS[k] === label) || "theory";
+const FIN = ["No, I'm starting it", "Yes, already finished: just schedule revisions"];
+const dd = d => parse(d).toLocaleDateString(undefined, {weekday:"short", day:"numeric", month:"short"});
+function topicPreview(sh, e){
+  const g = id => $("#f_" + id, sh), kind = kindKey(g("kind").value), done = g("fin").value === FIN[1];
+  if (e && e.target.id === "f_days") sh.dataset.daysTouched = "1";
+  if (!sh.dataset.daysTouched && !done) g("days").value = SUGGEST[kind];
+  // show or hide the days field, and relabel the date
+  g("days").style.display = done ? "none" : ""; $("label[for=f_days]", sh).style.display = done ? "none" : "";
+  $("label[for=f_date]", sh).textContent = done ? "When did you finish it?" : "When do you start?";
+  const date = g("date").value, n = Math.round(+g("days").value), box = $("#liveBox", sh);
+  if (!date || (!done && !(n >= 1))) { box.innerHTML = "<span class='mute small'>Pick a date and the days you need to see your schedule.</span>"; return; }
+  const fin = done ? date : addDays(date, n - 1), q = Q();
+  let h = "";
+  if (!done) {
+    const [th, pr] = phases(kind, n);
+    h += "<div class='title'>Study: " + dd(date) + " → " + dd(fin) + " (" + n + " day" + (n > 1 ? "s" : "") + ")</div>";
+    if (pr) h += "<div class='small' style='margin-top:4px'>Theory: " + dd(date) + (th > 1 ? " → " + dd(addDays(date, th - 1)) : "")
+      + "<br>Numericals + " + q + ": " + dd(addDays(date, th)) + (pr > 1 ? " → " + dd(fin) : "") + "</div>";
+    if (kind !== "theory") h += "<div class='small mute' style='margin-top:4px'>Numerical topics need more days: suggested " + SUGGEST[kind] + " (theory: " + SUGGEST.theory + "). Change it to your speed.</div>";
+  }
+  h += "<div class='title' style='margin-top:10px'>Revisions" + (done ? "" : " if you finish on time") + "</div><div class='small'>"
+    + revPlan(fin).map((d, i) => "R" + (i + 1) + ": " + dd(d)).join(" · ") + "</div>"
+    + "<div class='small mute' style='margin-top:4px'>Every revision: revise your notes, then solve " + q + " of this topic (about " + REV_GRINDS[kind] + " Grind" + (REV_GRINDS[kind] > 1 ? "s" : "") + ").</div>";
+  box.innerHTML = h;
+}
 function addTopic(){
   sheet("New topic or unit", [
     {k:"subject", label:"Subject", list:true, ph:isSchool() ? "e.g. Maths" : "e.g. Steel Structure"},
     {k:"topic", label:isSchool() ? "Chapter" : "Topic / unit", ph:isSchool() ? "e.g. Ch 4 - Quadratic Equations" : "e.g. Compression Members"},
-    {k:"days", label:"Days you plan to take", type:"number", value:7},
-    {k:"kind", label:"Type", type:"select", options:kindOpts(), value:kindOpts()[0]},
-    {k:"where", label:"Where are you?", type:"select", options:["Starting it now","Already finished it"], value:"Starting it now"},
-    {k:"date", label:"Start date (finish date, if already finished)", type:"date", value:today()}
+    {k:"kind", label:"Type", type:"select", options:kindOpts(), value:KINDS.theory},
+    {k:"date", label:"When do you start?", type:"date", value:today()},
+    {k:"days", label:"Days you plan to take", type:"number", value:SUGGEST.theory},
+    {k:"fin", label:"Already finished this topic?", type:"select", options:FIN, value:FIN[0]}
   ], v => {
     if (!v.subject || !v.topic || !v.date) return "Fill subject, topic and date";
-    const o = {id:uid(), subject:v.subject, topic:v.topic, numerical:v.kind === kindOpts()[1], started:v.date, planDays:null, studied:null, done:[], pyq:[], acc:null};
-    if (v.where === "Already finished it") o.studied = v.date;
+    const kind = kindKey(v.kind);
+    const o = {id:uid(), subject:v.subject, topic:v.topic, kind, numerical:kind !== "theory", started:v.date, planDays:null, studied:null, done:[], pyq:[], acc:null};
+    if (v.fin === FIN[1]) { if (v.date > today()) return "A finished topic can't have a future date"; o.studied = v.date; }
     else { if (!(+v.days >= 1)) return "Days planned must be 1 or more"; o.planDays = Math.round(+v.days); }
     S.topics.push(o);
-  }, {note:"Set your own pace: you can add or cut days later. Revisions start when you mark the topic finished."});
+    setTimeout(() => toast(o.studied ? "First revision: " + nice(nextDue(o)) : "Finish by " + nice(planEnd(o)) + ". Go get it."), 50);
+  }, {live:topicPreview, note:"Pick your own pace. You can change the days later. Revisions start when you tap Finished."});
 }
 function planForm(id){
   const t = S.topics.find(x => x.id === id); if (!t) return;
@@ -447,38 +491,33 @@ function finishTopic(id){
     t.studied = v.date; t.done = []; t.pyq = [];
     const took = daysBetween(t.started, v.date) + 1;
     setTimeout(() => toast("Done in " + took + " of " + (t.planDays||took) + " planned days. First revision: " + nice(nextDue(t))), 50);
-  }, {note:t.subject + " · " + t.topic + ". Revisions begin now" + (t.numerical ? ", each with " + Q() + " of this topic." : "."), saveLabel:"Mark finished"});
+  }, {note:t.subject + " · " + t.topic + ". Revisions begin now, each with " + Q() + " of this topic.", saveLabel:"Mark finished"});
 }
 function markDone(id){
   const t = S.topics.find(x => x.id === id); if (!t) return;
-  const f = [{k:"date", label:"Revised on", type:"date", value:today()}];
-  if (t.numerical) f.push({k:"qa", label:QC() + " attempted (required)", type:"number", ph:"e.g. 20"}, {k:"qc", label:QC() + " correct", type:"number", ph:"e.g. 15"});
-  else f.push({k:"acc", label:"Question accuracy % (optional)", type:"number", ph:"e.g. 78"});
-  sheet("Revision " + (t.done.length+1) + " done", f, v => {
+  sheet("Revision " + (t.done.length+1) + " done", [
+    {k:"date", label:"Revised on", type:"date", value:today()},
+    {k:"qa", label:QC() + " attempted (required)", type:"number", ph:"e.g. 20"},
+    {k:"qc", label:QC() + " correct", type:"number", ph:"e.g. 15"}
+  ], v => {
     if (!v.date) return "Pick a date";
     const prev = t.done.length ? t.done[t.done.length-1] : t.studied;
     if (v.date < prev) return "Date is before the previous step (" + nice(prev) + ")";
-    t.pyq = t.pyq || [];
-    if (t.numerical) {
-      const qa = Math.round(+v.qa), qc = Math.round(+v.qc || 0);
-      if (!(qa >= 1)) return "Numerical topic: solve its " + Q() + " first, then enter how many";
-      if (qc > qa) return "Correct cannot be more than attempted";
-      t.pyq[t.done.length] = [qa, qc]; t.acc = Math.round(100*qc/qa);
-    } else {
-      if (v.acc !== "" && (isNaN(+v.acc) || +v.acc > 100)) return "Accuracy must be 0 to 100";
-      if (v.acc !== "") t.acc = +v.acc;
-    }
+    const qa = Math.round(+v.qa), qc = Math.round(+v.qc || 0);
+    if (!(qa >= 1)) return "Solve the " + Q() + " of this topic first, then enter how many";
+    if (qc > qa) return "Correct cannot be more than attempted";
+    t.pyq = t.pyq || []; t.pyq[t.done.length] = [qa, qc]; t.acc = Math.round(100*qc/qa);
     t.done.push(v.date);
     const n = nextDue(t);
     setTimeout(() => toast(n ? "Next revision: " + nice(n) : "All revisions done. Topic mastered!"), 50);
-  }, {note:t.subject + " · " + t.topic + (t.numerical ? " · numerical: " + Q() + " are part of this revision" : ""), saveLabel:"Mark done"});
+  }, {note:t.subject + " · " + t.topic + " · every revision includes " + Q(), saveLabel:"Mark done"});
 }
 function editTopic(id){
   const t = S.topics.find(x => x.id === id); if (!t) return;
   sheet("Edit topic", [
     {k:"subject", label:"Subject", list:true, value:t.subject},
     {k:"topic", label:"Topic / unit", value:t.topic},
-    {k:"kind", label:"Type", type:"select", options:kindOpts(), value:kindOpts()[t.numerical ? 1 : 0]},
+    {k:"kind", label:"Type", type:"select", options:kindOpts(), value:KINDS[kindOf(t)]},
     {k:"started", label:"Started on", type:"date", value:t.started || t.studied},
     {k:"days", label:"Days planned", type:"number", value:t.planDays || ""},
     {k:"studied", label:"Finished on (leave empty if still studying)", type:"date", value:t.studied || ""},
@@ -489,7 +528,7 @@ function editTopic(id){
     if (!v.subject || !v.topic || !v.started) return "Fill subject, topic and start date";
     if (v.studied && v.studied < v.started) return "Finish date is before the start date";
     if (!v.studied && !(+v.days >= 1)) return "Give the days planned, or a finish date";
-    t.subject = v.subject; t.topic = v.topic; t.numerical = v.kind === kindOpts()[1];
+    t.subject = v.subject; t.topic = v.topic; t.kind = kindKey(v.kind); t.numerical = t.kind !== "theory";
     t.started = v.started; t.planDays = +v.days >= 1 ? Math.round(+v.days) : null; t.studied = v.studied || null;
     t.acc = v.acc === "" ? null : +v.acc;
     const keep = t.studied ? +v.undo : 0;
@@ -498,7 +537,7 @@ function editTopic(id){
 }
 function reviseNow(id){
   const t = S.topics.find(x => x.id === id); if (!t) return;
-  S.draft = {type:"Revision", subject:t.subject, topic:t.topic + " (R" + (t.done.length+1) + (t.numerical ? " + " + Qs() + ")" : ")")};
+  S.draft = {type:"Revision", subject:t.subject, topic:t.topic + " (R" + (t.done.length+1) + " + " + Qs() + ")"};
   S.tab = "timer"; save(); render();
 }
 function studyNow(id){
@@ -553,14 +592,14 @@ function settingsForm(){
   sheet("Settings", [
     {k:"who", label:"I am a", type:"select", options:pk.map(k => PROF[k].label), value:PROF[cur].label},
     {k:"exam", label:"Exam, class or course", value:S.profile ? S.profile.exam : "", ph:PROF[cur].ph},
-    {k:"pomo", label:"Pomodoro length (minutes)", type:"number", value:s.pomo},
+    {k:"pomo", label:"Grind length (minutes)", type:"number", value:s.pomo},
     {k:"short", label:"Short break (minutes)", type:"number", value:s.short},
     {k:"long", label:"Long break (minutes)", type:"number", value:s.long},
-    {k:"setSize", label:"Pomodoros before a long break", type:"number", value:s.setSize},
+    {k:"setSize", label:"Grinds before a long break", type:"number", value:s.setSize},
     {k:"target", label:"Daily target study hours", type:"number", value:s.target},
     {k:"gaps", label:"Revision gaps in days (R1 to R5)", value:s.gaps.join(", ")},
     {k:"weak", label:"Weak accuracy line (%)", type:"number", value:s.weak},
-    {k:"wake", label:"Keep screen on during a Pomodoro", type:"select", options:["Yes","No"], value:s.wake?"Yes":"No"},
+    {k:"wake", label:"Keep screen on during a Grind", type:"select", options:["Yes","No"], value:s.wake?"Yes":"No"},
     {k:"data", label:"Backup", type:"select", options:["No action","Show the walkthrough again","Download backup file","Restore from backup file","Erase all my data"], value:"No action"}
   ], v => {
     const g = v.gaps.split(/[,\s]+/).map(Number).filter(n => n > 0);
@@ -628,7 +667,7 @@ function stopTimer(){
   const t = S.timer; if (!t) return;
   if (t.phase === "focus") {
     const done = (t.total - timerRemaining()) / 60000;
-    if (done >= 1 && confirm("Stop now and log " + Math.round(done) + " min as a session? (It will not count as a full Pomodoro.)")) logFocus(t, Date.now(), done, 0);
+    if (done >= 1 && confirm("Stop now and log " + Math.round(done) + " min as a session? (It will not count as a full Grind.)")) logFocus(t, Date.now(), done, 0);
     S.timer = {phase:"focus", count:t.count, left:S.settings.pomo*60000, total:S.settings.pomo*60000, running:false};
   } else {
     S.timer = {phase:"focus", count:t.count, left:S.settings.pomo*60000, total:S.settings.pomo*60000, running:false};
@@ -654,11 +693,11 @@ function phaseEnd(){
     const count = t.count + 1, long = count % S.settings.setSize === 0;
     const ph = long ? "long" : "short", ms = phaseMin(ph)*60000;
     S.timer = {phase:ph, count, left:ms, total:ms, running:true, endAt:end + ms, type:t.type, subject:t.subject, topic:t.topic};
-    alertUser("Pomodoro done", long ? "Take a long break: " + S.settings.long + " min" : "Short break: " + S.settings.short + " min");
+    alertUser("Grind done", long ? "Take a long break: " + S.settings.long + " min" : "Short break: " + S.settings.short + " min");
   } else {
     const ms = S.settings.pomo*60000;
     S.timer = {phase:"focus", count:t.count, left:ms, total:ms, running:false};
-    alertUser("Break over", "Start your next Pomodoro");
+    alertUser("Break over", "Start your next Grind");
   }
   wake(false); save(); render();
 }
@@ -691,12 +730,13 @@ const TABS = [["today","Today"],["timer","Timer"],["topics","Topics"],["log","Lo
 let logDate = today(), topicFilter = "All";
 
 function topicRow(t, withActions){
-  const st = status(t), num = t.numerical ? " · Numerical" : "";
+  const st = status(t), kind = kindOf(t), num = kind === "theory" ? "" : " · " + KINDS[kind];
   if (!t.studied) {
     const day = daysBetween(t.started, today()) + 1, n = Math.max(1, t.planDays || 1);
     return "<div class='item'><div class='row between'><div class='grow' data-edit='"+t.id+"'>"
       + "<div class='title'>"+esc(t.topic)+"</div>"
-      + "<div class='small mute'>"+esc(t.subject)+num+" · "+(day < 1 ? "starts "+nice(t.started) : "day "+day+" of "+n)+" · finish by "+nice(planEnd(t))+"</div>"
+      + "<div class='small mute'>"+esc(t.subject)+num+" · "+(day < 1 ? "starts "+nice(t.started) : "day "+day+" of "+n)+" · finish by "+nice(planEnd(t))
+      + (day >= 1 && day <= n && phases(kind, n)[1] ? " · " + (day <= phases(kind, n)[0] ? "theory phase" : "numericals + " + Qs() + " phase") : "") + "</div>"
       + "<div class='bar"+(day > n ? " over" : "")+"'><i style='width:"+Math.min(100, Math.max(3, Math.round(100*day/n)))+"%'></i></div></div>"
       + "<span class='chip "+st.k+"'>"+st.label+"</span></div>"
       + (withActions ? "<div class='acts2'><button class='btn sm pri' data-study='"+t.id+"'>Study now</button><button class='btn sm' data-finish='"+t.id+"'>Finished</button><button class='btn sm' data-plan='"+t.id+"'>Change days</button></div>" : "")
@@ -706,7 +746,7 @@ function topicRow(t, withActions){
   let dots = ""; for (let i=0;i<g;i++) dots += "<i class='"+(i<n?"d":(i===n&&nd&&nd<=today()?"n":""))+"'></i>";
   return "<div class='item'><div class='row between'><div class='grow' data-edit='"+t.id+"'>"
     + "<div class='title'>"+esc(t.topic)+"</div>"
-    + "<div class='small mute'>"+esc(t.subject)+num+" · "+(nd ? "R"+(n+1)+(t.numerical?" + "+Qs():"")+" due "+nice(nd) : "all revisions done")+(t.acc!=null?" · "+t.acc+"%":"")+"</div>"
+    + "<div class='small mute'>"+esc(t.subject)+num+" · "+(nd ? "R"+(n+1)+" + "+Qs()+" due "+nice(nd) : "all revisions done")+(t.acc!=null?" · "+t.acc+"%":"")+"</div>"
     + "<div class='dots'>"+dots+"</div></div>"
     + "<span class='chip "+st.k+"'>"+st.label+"</span></div>"
     + (withActions && nd ? "<div class='acts2'><button class='btn sm pri' data-revise='"+t.id+"'>Revise now</button><button class='btn sm' data-done='"+t.id+"'>Mark done</button></div>" : "")
@@ -720,10 +760,10 @@ function viewToday(){
     + "<div class='small mute'>Pick what you are studying now and how many days you need. Everything else follows from it.</div>"
     + "<button class='btn pri wide' style='margin-top:12px' data-add='topic'>Start a topic</button></div>";
   h += "<div class='card'><h2>Today so far</h2><div class='stats'>"
-    + "<div class='stat'><b>"+sumPomo(ss)+"</b><span>Pomodoros</span></div>"
+    + "<div class='stat'><b>"+sumPomo(ss)+"</b><span>Grinds</span></div>"
     + "<div class='stat'><b>"+dur(min)+"</b><span>Studied of "+dur(tgt)+" target</span></div></div>"
     + (yMin ? "<div class='small mute' style='margin-top:8px'>"+(min > yMin ? "You beat yesterday ("+dur(yMin)+")." : "Yesterday you studied "+dur(yMin)+". "+dur(yMin-min+1)+" more beats it.")+"</div>" : "")
-    + "<button class='btn pri wide' style='margin-top:12px' data-go='timer'>"+(S.timer&&S.timer.running?"Open timer":"Start a Pomodoro")+"</button></div>";
+    + "<button class='btn pri wide' style='margin-top:12px' data-go='timer'>"+(S.timer&&S.timer.running?"Open timer":"Start a Grind")+"</button></div>";
   h += "<div class='card'><h2>Revise these first ("+due.length+")</h2>";
   if (!due.length) h += "<div class='empty'>"+(S.topics.some(t=>t.studied) ? "No revision due today." : "Revisions appear here after you finish a topic.")+"</div>";
   else h += due.map(t => topicRow(t, true)).join("");
@@ -759,7 +799,7 @@ function viewTimer(){
   else h += "<button class='btn pri grow' data-t='start'>"+(fresh?"Start "+S.settings.pomo+" min focus":"Resume")+"</button>"+(fresh?"":"<button class='btn grow danger' data-t='stop'>"+(ph==="focus"?"Stop":"Skip break")+"</button>");
   h += "</div>";
   if (t && t.count && !running) h += "<button class='btn sm wide' style='margin-top:8px' data-t='reset'>Finish sitting (reset count)</button>";
-  h += "</div><div class='card'><h2>The rule</h2><div class='small mute'>"+S.settings.pomo+" min of full focus, then a "+S.settings.short+" min break. After "+S.settings.setSize+" Pomodoros take a "+S.settings.long+" min break. Phone face down. Each finished Pomodoro is logged for you and earns 10 XP. Keep this app open so the alarm rings on time.</div></div>";
+  h += "</div><div class='card'><h2>The rule</h2><div class='small mute'>One Grind = "+S.settings.pomo+" min of full focus, then a "+S.settings.short+" min break. After "+S.settings.setSize+" Grinds take a "+S.settings.long+" min break. Phone face down. Each finished Grind is logged for you and earns 10 XP. Keep this app open so the alarm rings on time.</div></div>";
   return h;
 }
 function viewTopics(){
@@ -788,7 +828,7 @@ function viewLog(){
     + "<div class='stat'><b>"+(elh?Math.round(100*alh/elh):0)+"%</b><span>of "+dur(elh)+" target (ELH)</span></div>"
     + "<div class='stat'><b>"+(cbh==null?"–":dur(cbh))+"</b><span>CBH · bed hours</span></div>"
     + "<div class='stat'><b>"+(x.wt==null&&x.wtm==null?"–":dur(twt))+"</b><span>TWT · wasted"+(x.wtm?" ("+dur(x.wtm)+" mobile)":"")+"</span></div>"
-    + "<div class='stat'><b>"+sumPomo(ss)+"</b><span>Pomodoros</span></div>"
+    + "<div class='stat'><b>"+sumPomo(ss)+"</b><span>Grinds</span></div>"
     + "<div class='stat'><b>"+(acc==null?"–":acc+"%")+"</b><span>Question accuracy</span></div></div></div>";
   h += "<div class='card'><h2>Sessions</h2>";
   h += ss.length ? ss.map(s => "<div class='item' data-sess='"+s.id+"'><div class='row between'><div class='grow'><div class='title'>"+esc(s.topic||s.subject||s.type)+"</div>"
@@ -809,7 +849,7 @@ function viewStats(){
     + "<div class='stat'><b>"+tgt+" h</b><span>Target ("+days+" days × "+S.settings.target+" h)</span></div>"
     + "<div class='stat'><b>"+(tgt?Math.round(100*act/tgt):0)+"%</b><span>Efficiency (actual / target)</span></div>"
     + "<div class='stat'><b>"+(act/days).toFixed(1)+" h</b><span>Average per day</span></div>"
-    + "<div class='stat'><b>"+sumPomo(ms)+"</b><span>Pomodoros</span></div>"
+    + "<div class='stat'><b>"+sumPomo(ms)+"</b><span>Grinds</span></div>"
     + "<div class='stat'><b>"+ms.filter(s=>s.type==="Revision").length+"</b><span>Revision sessions</span></div>"
     + "<div class='stat'><b>"+(wasted/60).toFixed(1)+" h</b><span>Total wasted time</span></div>"
     + "<div class='stat'><b>"+(acc==null?"–":acc+"%")+"</b><span>Question accuracy</span></div>"
